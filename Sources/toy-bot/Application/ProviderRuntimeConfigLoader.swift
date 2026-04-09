@@ -25,7 +25,7 @@ struct ProviderRuntimeConfigLoader {
                 ?? cli["ollama-host"]
                 ?? environment["OLLAMA_HOST"]
                 ?? "http://localhost:11434"
-            model = cli["model"] ?? environment["TOYBOT_MODEL"] ?? "llama3.1"
+            model = cli["model"] ?? environment["TOYBOT_MODEL"] ?? "llama3.2"
             token = cli["token"] ?? environment["TOYBOT_API_TOKEN"]
         case .openai:
             baseURL = cli["base-url"] ?? environment["TOYBOT_BASE_URL"] ?? "https://api.openai.com"

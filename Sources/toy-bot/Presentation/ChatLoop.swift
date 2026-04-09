@@ -1,7 +1,31 @@
-//
-//  ChatLoop.swift
-//  toy-bot
-//
-//  Created by Michael Ovchinnikov on 08.04.2026.
-//
-
+final class ChatLoop {
+    private let agentSession: AgentSession
+    
+    init(agentSession: AgentSession) {
+        self.agentSession = agentSession
+    }
+    
+    func runChatLoop() async {
+        while true {
+            print("\nYou: ", terminator: "")
+            guard let input = readLine() else { continue }
+            
+            let normalized = input.trimmingCharacters(in: .whitespacesAndNewlines)
+            if normalized.isEmpty { continue }
+            
+            if ["exit", "quit", "q"].contains(normalized.lowercased()) {
+                print("👋 Shutting down...")
+                break
+            }
+            
+            do {
+                print("🤖 Bot: (typing...)", terminator: "\r")
+                let response = try await agentSession.chat(normalized)
+                print(String(repeating: " ", count: 30), terminator: "\r")
+                print("🤖 Bot: \(response.content)")
+            } catch {
+                print("\n❌ Error: \(error.localizedDescription)")
+            }
+        }
+    }
+}

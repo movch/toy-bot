@@ -1,5 +1,5 @@
 import Foundation
 
-protocol LLMClient {
+protocol LLMClient: Sendable {
     func sendMessage(history: [Message]) async throws -> Message
 }

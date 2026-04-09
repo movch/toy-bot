@@ -1,21 +1,23 @@
-// The Swift Programming Language
-// https://docs.swift.org/swift-book
 import Foundation
 
 @main
 struct ToyBot {
     static func main() async {
         let providerConfig = ProviderRuntimeConfigLoader().load()
-
         let httpClient = URLSessionHttpClient(session: .shared)
         let decoder = JSONResponseDecoder(jsonDecoder: JSONDecoder())
-        _ = OpenAIClient(
+        let llmClient = OpenAIClient(
             providerConfig: providerConfig,
             httpClient: httpClient,
             decoder: decoder
         )
+        let agent = DefaultAgent(llmClient: llmClient, systemPrompt: Constants.defaultAgentPrompt)
+        let agentSession = AgentSession(agent: agent)
+        let chatLoop = ChatLoop(agentSession: agentSession)
 
         print("toy-bot is configured for baseURL: \(providerConfig.baseURL)")
         print("model: \(providerConfig.defaultModel)")
+        
+        await chatLoop.runChatLoop()
     }
 }
