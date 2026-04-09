@@ -28,7 +28,7 @@ struct AuthInterceptor: RequestInterceptor {
             return request
         case .bearer:
             guard let token = tokenProvider.token, !token.isEmpty else {
-                throw AuthInterceptorError.missingToken
+                return request
             }
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
