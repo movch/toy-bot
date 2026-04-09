@@ -1,0 +1,30 @@
+.DS_Store
+
+# SwiftPM / build artifacts
+.build/
+.swiftpm/
+
+# Xcode / IDE
+DerivedData/
+*.xcworkspace
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+*.xcuserdatad/
+*.xcuserstate
+
+# Playgrounds
+timeline.xctimeline
+playground.xcworkspace
+
+# Tests / coverage
+*.profdata
+*.xccovreport
+*.xccovarchive
+.DS_Store
+/.build
+/Packages
+xcuserdata/
+DerivedData/
+.swiftpm/configuration/registries.json
+.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
+.netrc
