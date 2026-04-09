@@ -1,3 +1,5 @@
+import Darwin
+
 final class ChatLoop {
     private let agentSession: AgentSession
     
@@ -19,9 +21,10 @@ final class ChatLoop {
             }
             
             do {
-                print("🤖 Bot: (typing...)", terminator: "\r")
+                print("🤖 Bot: (typing...)", terminator: "")
+                fflush(stdout)
                 let response = try await agentSession.chat(normalized)
-                print(String(repeating: " ", count: 30), terminator: "\r")
+                print("\r\(String(repeating: " ", count: 30))\r", terminator: "")
                 print("🤖 Bot: \(response.content)")
             } catch {
                 print("\n❌ Error: \(error.localizedDescription)")
