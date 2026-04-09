@@ -27,7 +27,8 @@ final class ChatLoop {
                 print("\r\(String(repeating: " ", count: 30))\r", terminator: "")
                 print("🤖 Bot: \(response.content)")
             } catch {
-                print("\n❌ Error: \(error.localizedDescription)")
+                print("\r\(String(repeating: " ", count: 30))\r", terminator: "")
+                print("\n❌ \(ErrorFormatter.userMessage(for: error))")
             }
         }
     }

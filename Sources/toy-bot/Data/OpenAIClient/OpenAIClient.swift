@@ -1,7 +1,7 @@
 import Foundation
 
 enum OpenAIClientError: Error {
-    case failedToBuildRequest
+    case failedToBuildRequest(underlying: Error)
     case emptyResponse
 }
 
@@ -43,7 +43,7 @@ extension OpenAIClient: LLMClient {
                 serverConfiguration: providerConfig
             )
         } catch {
-            throw OpenAIClientError.failedToBuildRequest
+            throw OpenAIClientError.failedToBuildRequest(underlying: error)
         }
 
         let responseData = try await httpClient.request(urlRequest)
