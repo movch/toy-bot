@@ -9,7 +9,7 @@ final class ChatLoop {
     
     func runChatLoop() async {
         while true {
-            print("\nYou: ", terminator: "")
+            print("\n>>> ", terminator: "")
             guard let input = readLine() else { continue }
             
             let normalized = input.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -15,7 +15,7 @@ struct ToyBot {
         let agentSession = InMemoryAgentSession(agent: agent)
         let chatLoop = ChatLoop(agentSession: agentSession)
 
-        print("toy-bot is configured for baseURL: \(providerConfig.baseURL)")
+        print("\ntoy-bot is configured for baseURL: \(providerConfig.baseURL)")
         print("model: \(providerConfig.defaultModel)")
         
         await chatLoop.runChatLoop()
