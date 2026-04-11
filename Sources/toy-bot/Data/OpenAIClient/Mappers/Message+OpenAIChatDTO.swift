@@ -1,11 +1,19 @@
 extension Message {
     var openAIChatDTO: OpenAIChatDTO.Message {
-        OpenAIChatDTO.Message(role: role.openAIChatDTO, content: content)
+        switch self {
+        case .system(let content):    return OpenAIChatDTO.Message(role: .system, content: content)
+        case .user(let content):      return OpenAIChatDTO.Message(role: .user, content: content)
+        case .assistant(let content): return OpenAIChatDTO.Message(role: .assistant, content: content)
+        }
     }
 }
 
 extension OpenAIChatDTO.Message {
     var domain: Message {
-        Message(role: role.domain, content: content)
+        switch role {
+        case .system:    return .system(content)
+        case .user:      return .user(content)
+        case .assistant: return .assistant(content)
+        }
     }
 }

@@ -5,7 +5,7 @@ actor InMemoryAgentSession: AgentSession {
     init(agent: any Agent) {
         self.agent = agent
         self.history = [
-            Message(role: .system, content: agent.systemPrompt),
+            .system(agent.systemPrompt),
         ]
     }
 
@@ -15,7 +15,7 @@ actor InMemoryAgentSession: AgentSession {
             throw AgentSessionError.emptyInput
         }
 
-        let userMessage = Message(role: .user, content: trimmed)
+        let userMessage = Message.user(trimmed)
         history.append(userMessage)
 
         do {
