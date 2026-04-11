@@ -1,6 +1,6 @@
 import Foundation
 
-extension AgentSession.SessionError {
+extension AgentSessionError {
     var userFacingMessage: String {
         switch self {
         case .emptyInput:

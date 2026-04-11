@@ -1,6 +1,6 @@
 import Foundation
 
-struct DefaultAgent: Sendable, Agent {
+struct ChatAgent: Sendable, Agent {
     let llmClient: LLMClient
     let systemPrompt: String
 }

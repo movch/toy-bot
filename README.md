@@ -7,12 +7,12 @@ Minimal Swift CLI bot with an OpenAI-compatible client.
 Currently it is "just chat loop" agent:
 
 - `ChatLoop` (`Presentation`): handles terminal input/output and loop control (`exit`, `quit`, `q`).
-- `AgentSession` (`Data/Agent`): owns conversation history and orchestrates one chat turn:
+- `AgentSession` (protocol, `Domain/Interfaces`); `InMemoryAgentSession` (`Application/Agent`): owns conversation history in memory and orchestrates one chat turn:
   1. append user message,
   2. call LLM with full history,
   3. append assistant message,
   4. rollback last user message on request failure.
-- `Agent` / `DefaultAgent`: binds `LLMClient` and a system prompt.
+- `Agent` / `ChatAgent` (`Application/Agent`): binds `LLMClient` and a system prompt.
 - `OpenAIClient`: provider-agnostic chat completion client used by the session.
 
 When started, the app prints active config and enters interactive chat:

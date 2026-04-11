@@ -11,8 +11,8 @@ struct ToyBot {
             httpClient: httpClient,
             decoder: decoder
         )
-        let agent = DefaultAgent(llmClient: llmClient, systemPrompt: Constants.defaultAgentPrompt)
-        let agentSession = AgentSession(agent: agent)
+        let agent = ChatAgent(llmClient: llmClient, systemPrompt: Constants.defaultAgentPrompt)
+        let agentSession = InMemoryAgentSession(agent: agent)
         let chatLoop = ChatLoop(agentSession: agentSession)
 
         print("toy-bot is configured for baseURL: \(providerConfig.baseURL)")

@@ -3,7 +3,7 @@ import Foundation
 enum ErrorFormatter {
     static func userMessage(for error: Error) -> String {
         switch error {
-        case let error as AgentSession.SessionError:
+        case let error as AgentSessionError:
             return error.userFacingMessage
         case let error as RequestBuilderError:
             return error.userFacingMessage

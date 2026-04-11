@@ -1,9 +1,9 @@
 import Darwin
 
 final class ChatLoop {
-    private let agentSession: AgentSession
-    
-    init(agentSession: AgentSession) {
+    private let agentSession: any AgentSession
+
+    init(agentSession: any AgentSession) {
         self.agentSession = agentSession
     }
     
