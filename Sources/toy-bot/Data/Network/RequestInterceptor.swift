@@ -11,10 +11,6 @@ protocol TokenProvider: Sendable {
     var token: String? { get }
 }
 
-enum AuthInterceptorError: Error {
-    case missingToken
-}
-
 struct AuthInterceptor: RequestInterceptor {
     let tokenProvider: TokenProvider
 
