@@ -39,6 +39,7 @@ actor InMemoryAgentSession: AgentSession {
                 print("\n🔨 Tool: \(call.toolName):")
                 print("\(call.toolArguments)")
                 let result = await executeToolCall(call)
+                print("\nResult: \(result)")
                 history.append(.tool(content: result, toolCallId: call.id))
             }
         }
@@ -50,6 +51,11 @@ actor InMemoryAgentSession: AgentSession {
                 name: toolCall.toolName,
                 toolArguments: toolCall.toolArguments
             )
+        } catch let error as ToolRegistryError {
+            switch error {
+            case .toolNotFound(let name):
+                return "Error: no tool named \"\(name)\". Use only read_file or bash."
+            }
         } catch {
             return "Error executing tool: \(error.localizedDescription)"
         }

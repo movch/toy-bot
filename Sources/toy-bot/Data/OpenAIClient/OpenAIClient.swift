@@ -32,7 +32,7 @@ extension OpenAIClient: LLMClient {
         let chatRequest = OpenAIChatDTO.Request(
             model: providerConfig.defaultModel,
             history: history,
-            temperature: profile.temperature,
+            profile: profile,
             tools: tools
         )
 

@@ -6,12 +6,15 @@ struct BashTool: Tool {
     }
     
     let name = "bash"
-    let description = "Execute a bash shell command as a string and return its output"
+    let description = "Run one shell command; stdout and stderr are returned. Use for discovery when the path is unknown: list, search, glob, then pass a path from output to read_file."
     let parametersSchema = """
         {
             "type": "object",
             "properties": {
-                "command": { "type": "string", "description": "The bash command (string) to execute" }
+                "command": {
+                    "type": "string",
+                    "description": "Single bash command. When the user did not give an exact path, discover candidates first (list, find, glob), then use a printed path in read_file."
+                }
             },
             "required": ["command"]
         }

@@ -3,7 +3,13 @@ enum OpenAIChatDTO {
         let model: String
         let messages: [Message]
         let temperature: Double?
+        let topP: Double?
         let tools: [ToolSchema]?
+
+        enum CodingKeys: String, CodingKey {
+            case model, messages, temperature, tools
+            case topP = "top_p"
+        }
     }
 
     struct Response: Decodable, Sendable {
