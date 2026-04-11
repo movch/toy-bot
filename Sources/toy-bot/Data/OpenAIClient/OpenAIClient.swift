@@ -27,11 +27,12 @@ final class OpenAIClient: Sendable {
 }
 
 extension OpenAIClient: LLMClient {
-    func sendMessage(history: [Message]) async throws -> Message {
+    func sendMessage(history: [Message], tools: [any Tool]) async throws -> Message {
         let chatRequest = OpenAIChatDTO.Request(
             model: providerConfig.defaultModel,
             history: history,
-            temperature: 0.7
+            temperature: 0.7,
+            tools: tools
         )
 
         let endpoint = OpenAIEndpoint.chatCompletions(request: chatRequest)
