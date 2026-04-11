@@ -28,7 +28,7 @@ final class OpenAIClient: Sendable {
 
 extension OpenAIClient: LLMClient {
     func sendMessage(history: [Message]) async throws -> Message {
-        let chatRequest = OpenAIChatDTOMapper.makeRequest(
+        let chatRequest = OpenAIChatDTO.Request(
             model: providerConfig.defaultModel,
             history: history,
             temperature: 0.7
@@ -49,7 +49,7 @@ extension OpenAIClient: LLMClient {
         let responseData = try await httpClient.request(urlRequest)
         let chatResponse: OpenAIChatDTO.Response = try decoder.map(responseData)
 
-        guard let message = OpenAIChatDTOMapper.firstMessage(from: chatResponse) else {
+        guard let message = chatResponse.firstDomainMessage else {
             throw OpenAIClientError.emptyResponse
         }
 
