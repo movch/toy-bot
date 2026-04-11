@@ -6,12 +6,12 @@ struct BashTool: Tool {
     }
     
     let name = "bash"
-    let description = "Execute a bash shell command and return its output"
+    let description = "Execute a bash shell command as a string and return its output"
     let parametersSchema = """
         {
             "type": "object",
             "properties": {
-                "command": { "type": "string", "description": "The bash command to execute" }
+                "command": { "type": "string", "description": "The bash command (string) to execute" }
             },
             "required": ["command"]
         }
@@ -19,7 +19,7 @@ struct BashTool: Tool {
     
     func execute(toolArguments: String) async throws -> String {
         guard let args = try? JSONDecoder().decode(Arguments.self, from: Data(toolArguments.utf8)) else {
-            return "Error: invalid arguments"
+            return "Error: invalid arguments. Expected JSON with a 'command' string field. Try again."
         }
         
         let process = Process()

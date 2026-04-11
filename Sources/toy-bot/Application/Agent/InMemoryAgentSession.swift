@@ -36,8 +36,8 @@ actor InMemoryAgentSession: AgentSession {
             }
 
             for call in toolCalls {
-                print("\n🔨 Tool: \(call.toolName)")
-                print(" DEBUG: \(call.toolArguments)")
+                print("\n🔨 Tool: \(call.toolName):")
+                print("\(call.toolArguments)")
                 let result = await executeToolCall(call)
                 history.append(.tool(content: result, toolCallId: call.id))
             }
