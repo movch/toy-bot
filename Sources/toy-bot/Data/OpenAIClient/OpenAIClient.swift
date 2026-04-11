@@ -27,8 +27,7 @@ final class OpenAIClient: Sendable {
 }
 
 extension OpenAIClient: LLMClient {
-    func sendMessage(history: [Message], tools: [any Tool]) async throws -> Message {
-        let profile: GenerationProfile = tools.isEmpty ? .balanced : .deterministic
+    func sendMessage(history: [Message], tools: [any Tool], profile: GenerationProfile) async throws -> Message {
         let chatRequest = OpenAIChatDTO.Request(
             model: providerConfig.defaultModel,
             history: history,

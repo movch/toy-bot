@@ -17,12 +17,15 @@ actor InMemoryAgentSession: AgentSession {
 
         history.append(.user(content: trimmed))
 
+        var continuationAfterTools = false
         while true {
+            let profile: GenerationProfile = continuationAfterTools ? .deterministic : .balanced
             let response: Message
             do {
                 response = try await agent.llmClient.sendMessage(
                     history: history,
-                    tools: agent.toolRegistry.allTools
+                    tools: agent.toolRegistry.allTools,
+                    profile: profile
                 )
             } catch {
                 _ = history.popLast()
@@ -39,9 +42,9 @@ actor InMemoryAgentSession: AgentSession {
                 print("\n🔨 Tool: \(call.toolName):")
                 print("\(call.toolArguments)")
                 let result = await executeToolCall(call)
-                print("\nResult: \(result)")
                 history.append(.tool(content: result, toolCallId: call.id))
             }
+            continuationAfterTools = true
         }
     }
     
