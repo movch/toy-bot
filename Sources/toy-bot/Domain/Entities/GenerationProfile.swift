@@ -8,7 +8,7 @@ extension GenerationProfile {
     /// Used with tools / JSON-like outputs: low randomness.
     var temperature: Double {
         switch self {
-        case .deterministic: return 0.1
+        case .deterministic: return 0.2
         case .balanced:      return 0.4
         case .creative:      return 0.8
         }

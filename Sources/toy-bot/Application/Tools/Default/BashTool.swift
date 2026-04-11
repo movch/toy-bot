@@ -6,7 +6,7 @@ struct BashTool: Tool {
     }
     
     let name = "bash"
-    let description = "Run one shell command; stdout and stderr are returned. Use for discovery when the path is unknown: list, search, glob, then pass a path from output to read_file."
+    let description = "Run one shell command as a single string; stdout and stderr are returned. Use for discovery when the path is unknown: list, search, glob, then pass a path from output to read_file."
     let parametersSchema = """
         {
             "type": "object",
