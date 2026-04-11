@@ -28,10 +28,11 @@ final class OpenAIClient: Sendable {
 
 extension OpenAIClient: LLMClient {
     func sendMessage(history: [Message], tools: [any Tool]) async throws -> Message {
+        let profile: GenerationProfile = tools.isEmpty ? .balanced : .deterministic
         let chatRequest = OpenAIChatDTO.Request(
             model: providerConfig.defaultModel,
             history: history,
-            temperature: 0.7,
+            temperature: profile.temperature,
             tools: tools
         )
 
