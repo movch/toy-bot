@@ -1,22 +1,91 @@
 # toy-bot
 
+![toy-bot CLI session](img/screenshot.png)
+
 Minimal Swift CLI agent with tool calling support and an OpenAI-compatible client.
 
-## Current Architecture
+## Routing modes
 
-Tool-calling agent built on a clean layered architecture:
+The app can run the assistant in two ways. You choose how the model interacts with tools — this matters a lot for **small local models** (e.g. Llama 3.2 3B), which handle OpenAI-style function calling poorly.
 
-- `ChatLoop` (`Presentation`): handles terminal input/output and loop control (`exit`, `quit`, `q`).
-- `AgentSession` (protocol, `Domain/Interfaces`); `InMemoryAgentSession` (`Application/Agent`): owns conversation history and runs the tool-calling loop:
-  1. append user message,
-  2. call LLM with full history and tool schemas,
-  3. if response contains tool calls — execute them, append results, call LLM again,
-  4. repeat until LLM returns a plain text response,
-  5. rollback last user message on LLM request failure.
-- `Agent` / `ChatAgent` (`Application/Agent`): binds `LLMClient`, system prompt, and `ToolRegistry`.
-- `ToolRegistry` (`Application/Tools`): holds available tools, dispatches execution by name.
-- `Tool` (protocol, `Domain/Interfaces`): name, description, `parametersSchema` (JSON Schema string), and `execute`.
-- `OpenAIClient` (`Data`): provider-agnostic chat completion client with function calling support.
+| Mode | CLI / env value | When to use |
+|------|-----------------|-------------|
+| **Intent Router** | `intent` | Default for **Ollama**. The model never receives tool schemas; it only emits structured JSON intents. Your Swift code executes tools. Synthesis is a separate LLM call. |
+| **Tool calling** | `tool-calling` | Default for **OpenAI**. Classic chat completions with `tools` in the request; the model returns `tool_calls` like the OpenAI API. |
+
+**Defaults (if you do not set routing):**
+
+| Provider | Default routing |
+|----------|-----------------|
+| `ollama` | `intent` |
+| `openai` | `tool-calling` |
+
+**Override defaults:**
+
+```bash
+# Force OpenAI-style tool calling against Ollama (e.g. large model)
+swift run ToyBot --provider ollama --routing tool-calling
+
+# Force Intent Router against OpenAI (e.g. experiment with small models)
+swift run ToyBot --provider openai --routing intent
+```
+
+Environment variable: `TOYBOT_ROUTING=intent` or `TOYBOT_ROUTING=tool-calling`.
+
+On startup the app prints the active routing mode, for example:
+
+```text
+routing: intent
+```
+
+---
+
+## Intent Router pattern (routing: `intent`)
+
+This pattern splits work into **three roles** so small models only do one simple job at a time:
+
+1. **Router (LLM)** — Classifies the user message and conversation context into a single **intent** (`read_file`, `bash`, `search_file`, or `direct_chat`). The model does **not** see tool definitions. It is steered with **structured outputs**: `response_format` with a JSON Schema matching `IntentResponseDTO` (OpenAI-compatible / supported by Ollama structured outputs). Router prompts are in **English** for better compatibility with local models.
+
+2. **Executor (Swift)** — Maps `Intent` to real work: `ToolRegistry` runs `read_file` / `bash`, or `search_file` uses a fixed `find` command built in code. The model does not run arbitrary shell; the app decides how to search.
+
+3. **Synthesizer (LLM)** — After tools have run, a **second** call asks the model to answer or summarize using only the **collected context**. For long file content, synthesis uses a **short** message list (focused system prompt + user request + tool context) instead of the full chat history, so small models are less likely to return empty replies. Truncation and retries apply; if the model still returns nothing, a **deterministic excerpt** of the gathered context is shown.
+
+### Deterministic step resolution
+
+Between router calls, **`DeterministicIntentResolver`** can choose the next intent **without** calling the LLM when the next step is obvious from the last tool result, for example:
+
+- After `search_file` returns exactly one path → `read_file` with that path.
+- After several paths → pick a shallow path (fewer `/` segments) → `read_file`.
+- After a successful `read_file` → `direct_chat` (hand off to synthesis).
+- After `bash` returns a single path-like line → `read_file`.
+
+That reduces drift and duplicate “find again” loops on small models.
+
+---
+
+## Tool calling mode (routing: `tool-calling`)
+
+Uses **`InMemoryAgentSession`** with **`ChatAgent`**: the full conversation and OpenAI-style **function** tool schemas are sent on every turn. The model returns `tool_calls`; the app executes tools and calls the LLM again until there are no tool calls. This matches what large models (GPT-4, Claude, strong Ollama models) expect.
+
+---
+
+## Current architecture
+
+Layered layout:
+
+- **`ChatLoop`** (`Presentation`): terminal I/O, `exit` / `quit` / `q`.
+- **`AgentSession`** (`Domain/Interfaces`): `chat(_:)` → final `Message`.
+  - **`InMemoryAgentSession`**: tool-calling loop (history + LLM + tools until plain assistant reply).
+  - **`IntentRoutedSession`**: router → executor loop → synthesizer; optional deterministic resolution between steps.
+- **`Agent`** / **`ChatAgent`**: `LLMClient`, system prompt, `ToolRegistry` (used only by tool-calling path).
+- **`IntentRouter`** / **`LLMIntentRouter`**: classify → `Intent`.
+- **`ActionExecutor`** / **`LocalActionExecutor`**: `Intent` → tool strings.
+- **`Synthesizer`** / **`LLMSynthesizer`**: final natural-language answer from collected context.
+- **`DeterministicIntentResolver`**: code-only next-step intents when unambiguous.
+- **`ToolRegistry`** (`Application/Tools`): dispatches tools by name.
+- **`Tool`** (`Domain/Interfaces`): name, description, `parametersSchema`, `execute`.
+- **`OpenAIClient`** (`Data`): chat completions; optional `LLMStructuredOutput` for intent JSON schema.
+- **`IntentResponseDTO`** (`Data`): JSON shape for router + schema for structured outputs.
 
 ### Built-in tools
 
@@ -44,16 +113,17 @@ enum Message {
 swift run
 ```
 
-When started, the app prints active config and enters interactive chat:
+When started, the app prints active `baseURL`, `model`, and **`routing`**, then enters interactive chat:
 
 - prompt: `>>> `
 - assistant output: `🤖 Bot: ...`
-- tool execution: `🔨 Tool: <name>`
-- exit commands: `exit`, `quit`, `q`
+- **Tool calling mode:** `🔨 Tool: <name>` (tool arguments printed)
+- **Intent Router mode:** `🔍 Intent: <label>`; `⚡ auto: <label>` when the next step was chosen by `DeterministicIntentResolver` without the LLM
+- exit: `exit`, `quit`, `q`
 
 ## Ollama Configuration
 
-`toy-bot` defaults to Ollama with a local model. For best results with tool calling, use a model that supports function calling (e.g. `llama3.2`, `qwen2.5`).
+`toy-bot` defaults to Ollama with a local model. For **tool-calling** mode with Ollama, prefer models that support function calling well (e.g. `llama3.2`, `qwen2.5`). For **Intent Router** mode, smaller models are more usable because they are not asked to emit OpenAI `tool_calls`.
 
 ### Ollama Installation
 
@@ -82,6 +152,7 @@ If you do not pass any config, the app uses:
 - base URL: `http://localhost:11434`
 - model: `llama3.2`
 - token: not required
+- routing: **`intent`** (Intent Router)
 
 ## Configure via Environment Variables
 
@@ -92,21 +163,23 @@ If you do not pass any config, the app uses:
 | `TOYBOT_MODEL` | Model name |
 | `TOYBOT_API_TOKEN` | API token (optional for Ollama) |
 | `OLLAMA_HOST` | Fallback base URL for Ollama |
+| `TOYBOT_ROUTING` | `intent` (Intent Router) or `tool-calling` (OpenAI-style tools) |
 
 ```bash
 export TOYBOT_PROVIDER=ollama
 export TOYBOT_MODEL=llama3.2
+export TOYBOT_ROUTING=intent
 swift run
 ```
 
 ## Configure via CLI Arguments
 
 ```bash
-swift run ToyBot --provider ollama --base-url http://localhost:11434 --model llama3.2
-swift run ToyBot --provider openai --token sk-... --model gpt-4o-mini
+swift run ToyBot --provider ollama --base-url http://localhost:11434 --model llama3.2 --routing intent
+swift run ToyBot --provider openai --token sk-... --model gpt-4o-mini --routing tool-calling
 ```
 
-Supported flags: `--provider`, `--base-url`, `--model`, `--token`, `--ollama-host`
+Supported flags: `--provider`, `--base-url`, `--model`, `--token`, `--ollama-host`, **`--routing`**
 
 ## Configuration Priority
 
@@ -119,3 +192,4 @@ Supported flags: `--provider`, `--base-url`, `--model`, `--token`, `--ollama-hos
 - Token is not required for local Ollama; `Authorization` header is omitted when no token is set.
 - Request timeout is set to 5 minutes to accommodate slow local inference.
 - If you run Ollama remotely and need auth, pass `--token` or `TOYBOT_API_TOKEN`.
+- Structured outputs for the intent router require a recent Ollama that supports `response_format` / JSON schema on `/v1/chat/completions`.
