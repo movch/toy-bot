@@ -12,17 +12,21 @@ enum Constants {
         }
 
         Field rules:
-        - "path"     — only for "read_file". Must be an exact absolute path found in context.
+        - "path"     — only for "read_file". Copy EXACTLY from the latest tool output (relative \
+        paths like ./README.md are valid). Never guess a path.
         - "command"  — only for "bash". A single shell command string.
         - "keyword"  — only for "search_file". A filename keyword (no slashes).
         - "reasoning"— one short sentence: why this action is the right next step.
-        - Omit fields that are not relevant to the chosen action.
 
         Decision rules:
-        - If the context already contains enough data to answer the user, return "direct_chat".
-        - Never invent a file path. If the path is unknown, use "search_file" or "bash" first.
-        - Choose one action per response — the most logical immediate next step.
-        - If the same action has already been tried and failed, try a different approach.
+        - If search_file or bash already printed file path(s), your next action must be \
+        "read_file" with one of those paths — not another find/bash unless read_file failed. \
+        To produce a summary, you need the file contents via read_file first.
+        - If the file body is already in the context, return "direct_chat".
+        - If no path is in context yet, use "search_file" or "bash" once to discover paths.
+        - Do not repeat the same bash command if its last output was empty; prefer "read_file" \
+        on a path listed by search_file.
+        - One action per response — the single best next step.
         """
 
     static let synthesizerPrompt = """
@@ -32,6 +36,11 @@ enum Constants {
         Collected context:
         """
 
+    static let synthesizerNonEmptyRetryPrompt = """
+        Your previous answer was empty. You MUST respond with at least two sentences summarizing \
+        the collected context for the user. Do not leave the reply blank. Match the user's language.
+        """
+
     static let intentRouterSelfCorrectionUserMessage = """
         Your previous reply was not valid JSON or could not be read. Respond again with ONLY \
         one JSON object (no markdown fences, no prose). Use null for unused fields. Required \
@@ -39,8 +48,15 @@ enum Constants {
         """
 
     static let intentRouterLoopStoppedSystemNote = """
-        [System] The same intent was requested twice in a row; execution was skipped to avoid \
-        a loop. Summarize what succeeded or failed for the user using the context above.
+        [System] The same intent was requested twice in a row after a non-empty tool result; \
+        execution was skipped to avoid a loop. Summarize what succeeded or failed for the user \
+        using the context above.
+        """
+
+    static let intentRouterDuplicateAfterEmptyOutputNote = """
+        [System] The model repeated the same bash intent but the previous run produced no output. \
+        The next classification must use read_file with a path from search_file output, or \
+        direct_chat if enough data exists — do not repeat the same find/bash.
         """
 
     static let synthesizerEmptyReplyFallback = """

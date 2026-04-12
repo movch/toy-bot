@@ -26,6 +26,7 @@ actor IntentRoutedSession: AgentSession {
 
         var collectedContext = ""
         var previousIntent: Intent?
+        var lastExecutionResult: String?
 
         for _ in 0..<maxIterations {
             let intent = try await router.classify(history: history)
@@ -35,10 +36,20 @@ actor IntentRoutedSession: AgentSession {
             }
 
             if let prev = previousIntent, prev.isDuplicateLoop(with: intent) {
-                let note = Constants.intentRouterLoopStoppedSystemNote
-                history.append(.system(content: note))
-                collectedContext += "\n\n\(note)"
-                break
+                let lastOutputEmpty = lastExecutionResult?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true
+                if lastOutputEmpty {
+                    let note = Constants.intentRouterDuplicateAfterEmptyOutputNote
+                    history.append(.system(content: note))
+                    collectedContext += "\n\n\(note)"
+                    previousIntent = nil
+                    lastExecutionResult = nil
+                    continue
+                } else {
+                    let note = Constants.intentRouterLoopStoppedSystemNote
+                    history.append(.system(content: note))
+                    collectedContext += "\n\n\(note)"
+                    break
+                }
             }
 
             previousIntent = intent
@@ -46,6 +57,7 @@ actor IntentRoutedSession: AgentSession {
             print("\n🔍 Intent: \(intent.label)")
 
             let result = try await executor.execute(intent: intent)
+            lastExecutionResult = result
 
             let contextEntry = "[\(intent.label)] result:\n\(result)"
             history.append(.system(content: contextEntry))

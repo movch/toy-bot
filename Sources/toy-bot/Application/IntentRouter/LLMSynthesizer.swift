@@ -13,10 +13,23 @@ struct LLMSynthesizer: Synthesizer {
             synthHistory.append(.system(content: contextMessage))
         }
 
-        return try await llmClient.sendMessage(
+        var response = try await llmClient.sendMessage(
             history: synthHistory,
             tools: [],
             profile: .balanced
         )
+
+        let firstTrimmed = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        if firstTrimmed.isEmpty,
+           !collectedContext.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            synthHistory.append(.system(content: Constants.synthesizerNonEmptyRetryPrompt))
+            response = try await llmClient.sendMessage(
+                history: synthHistory,
+                tools: [],
+                profile: .deterministic
+            )
+        }
+
+        return response
     }
 }
