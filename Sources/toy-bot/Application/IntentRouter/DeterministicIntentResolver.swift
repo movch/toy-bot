@@ -82,12 +82,8 @@ private extension DeterministicIntentResolver {
             }
     }
 
+    /// Prefer paths that are shallower in the directory tree.
     func isLikelyBestMatch(_ path: String) -> Bool {
-        let lower = path.lowercased()
-        if lower.hasSuffix("readme.md") || lower.hasSuffix("readme.txt") || lower.hasSuffix("readme") {
-            return true
-        }
-        let depth = path.components(separatedBy: "/").count
-        return depth <= 3
+        path.components(separatedBy: "/").count <= 3
     }
 }
