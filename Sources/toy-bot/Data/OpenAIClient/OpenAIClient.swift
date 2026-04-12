@@ -27,12 +27,31 @@ final class OpenAIClient: Sendable {
 }
 
 extension OpenAIClient: LLMClient {
-    func sendMessage(history: [Message], tools: [any Tool], profile: GenerationProfile) async throws -> Message {
+    func sendMessage(
+        history: [Message],
+        tools: [any Tool],
+        profile: GenerationProfile,
+        structuredOutput: LLMStructuredOutput
+    ) async throws -> Message {
+        let responseFormat: OpenAIChatDTO.ResponseFormat? = switch structuredOutput {
+        case .none:
+            nil
+        case .jsonObject:
+            .jsonObject()
+        case .intentRouter:
+            .jsonSchema(
+                name: "intent_response",
+                strict: true,
+                schema: IntentResponseDTO.routerJSONSchema
+            )
+        }
+
         let chatRequest = OpenAIChatDTO.Request(
             model: providerConfig.defaultModel,
             history: history,
             profile: profile,
-            tools: tools
+            tools: tools,
+            responseFormat: responseFormat
         )
 
         let endpoint = OpenAIEndpoint.chatCompletions(request: chatRequest)

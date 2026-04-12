@@ -13,7 +13,8 @@ struct LLMIntentRouter: IntentRouter {
         let response = try await llmClient.sendMessage(
             history: routerHistory,
             tools: [],
-            profile: .deterministic
+            profile: .deterministic,
+            structuredOutput: .intentRouter
         )
 
         let raw = response.content.strippingMarkdownFences()
