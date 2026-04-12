@@ -5,6 +5,11 @@ enum ProviderKind: String, Sendable {
     case ollama
 }
 
+enum RoutingMode: String, Sendable {
+    case intentRouter  = "intent"
+    case toolCalling   = "tool-calling"
+}
+
 struct ProviderRuntimeConfigLoader {
     func load(
         arguments: [String] = CommandLine.arguments,
@@ -17,6 +22,7 @@ struct ProviderRuntimeConfigLoader {
         let baseURL: String
         let model: String
         let token: String?
+        let defaultRouting: RoutingMode
 
         switch provider {
         case .ollama:
@@ -27,16 +33,22 @@ struct ProviderRuntimeConfigLoader {
                 ?? "http://localhost:11434"
             model = cli["model"] ?? environment["TOYBOT_MODEL"] ?? "llama3.2"
             token = cli["token"] ?? environment["TOYBOT_API_TOKEN"]
+            defaultRouting = .intentRouter
         case .openai:
             baseURL = cli["base-url"] ?? environment["TOYBOT_BASE_URL"] ?? "https://api.openai.com"
             model = cli["model"] ?? environment["TOYBOT_MODEL"] ?? "gpt-4o-mini"
             token = cli["token"] ?? environment["TOYBOT_API_TOKEN"] ?? environment["OPENAI_API_KEY"]
+            defaultRouting = .toolCalling
         }
+
+        let routingRaw = cli["routing"] ?? environment["TOYBOT_ROUTING"]
+        let routing = routingRaw.flatMap { RoutingMode(rawValue: $0) } ?? defaultRouting
 
         return OpenAIProviderConfig(
             baseURL: baseURL,
             defaultModel: model,
-            token: token
+            token: token,
+            routingMode: routing
         )
     }
 

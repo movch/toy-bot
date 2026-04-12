@@ -20,18 +20,32 @@ struct ToyBot {
             ReadFileTool(),
             BashTool(),
         ])
-        
-        let agent = ChatAgent(
-            llmClient: llmClient,
-            systemPrompt: Constants.defaultAgentPrompt,
-            toolRegistry: toolRegistry
-        )
-        
-        let agentSession = InMemoryAgentSession(agent: agent)
+
+        let agentSession: any AgentSession
+
+        switch providerConfig.routingMode {
+        case .intentRouter:
+            agentSession = IntentRoutedSession(
+                router: LLMIntentRouter(llmClient: llmClient),
+                executor: LocalActionExecutor(toolRegistry: toolRegistry),
+                synthesizer: LLMSynthesizer(llmClient: llmClient),
+                systemPrompt: Constants.defaultAgentPrompt
+            )
+        case .toolCalling:
+            agentSession = InMemoryAgentSession(
+                agent: ChatAgent(
+                    llmClient: llmClient,
+                    systemPrompt: Constants.defaultAgentPrompt,
+                    toolRegistry: toolRegistry
+                )
+            )
+        }
+
         let chatLoop = ChatLoop(agentSession: agentSession)
 
         print("\ntoy-bot is configured for baseURL: \(providerConfig.baseURL)")
         print("model: \(providerConfig.defaultModel)")
+        print("routing: \(providerConfig.routingMode.rawValue)")
         
         await chatLoop.runChatLoop()
     }

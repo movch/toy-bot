@@ -1,4 +1,37 @@
 enum Constants {
+    static let intentRouterPrompt = """
+        You are an intent classifier. Analyze the user's request and the full conversation \
+        context, then return ONLY a JSON object — no markdown fences, no explanation, \
+        no extra keys:
+        {
+          "action": "read_file" | "bash" | "search_file" | "direct_chat",
+          "path": "...",
+          "command": "...",
+          "keyword": "...",
+          "reasoning": "..."
+        }
+
+        Field rules:
+        - "path"     — only for "read_file". Must be an exact absolute path found in context.
+        - "command"  — only for "bash". A single shell command string.
+        - "keyword"  — only for "search_file". A filename keyword (no slashes).
+        - "reasoning"— one short sentence: why this action is the right next step.
+        - Omit fields that are not relevant to the chosen action.
+
+        Decision rules:
+        - If the context already contains enough data to answer the user, return "direct_chat".
+        - Never invent a file path. If the path is unknown, use "search_file" or "bash" first.
+        - Choose one action per response — the most logical immediate next step.
+        - If the same action has already been tried and failed, try a different approach.
+        """
+
+    static let synthesizerPrompt = """
+        You have gathered all necessary data. Use ONLY the information below to answer \
+        the user's original request. Be concise. Match the user's language.
+
+        Collected context:
+        """
+
     static let defaultAgentPrompt = """
         You are a local coding assistant with two tools: read_file and bash.
 
