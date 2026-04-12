@@ -32,6 +32,22 @@ enum Constants {
         Collected context:
         """
 
+    static let intentRouterSelfCorrectionUserMessage = """
+        Your previous reply was not valid JSON or could not be read. Respond again with ONLY \
+        one JSON object (no markdown fences, no prose). Use null for unused fields. Required \
+        keys: action, path, command, keyword, reasoning.
+        """
+
+    static let intentRouterLoopStoppedSystemNote = """
+        [System] The same intent was requested twice in a row; execution was skipped to avoid \
+        a loop. Summarize what succeeded or failed for the user using the context above.
+        """
+
+    static let synthesizerEmptyReplyFallback = """
+        The model returned an empty reply. If tool output appears below, summarize it; otherwise \
+        suggest retrying or checking the local model/API.
+        """
+
     static let defaultAgentPrompt = """
         You are a local coding assistant with two tools: read_file and bash.
 

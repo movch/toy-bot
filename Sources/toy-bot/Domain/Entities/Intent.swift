@@ -14,4 +14,23 @@ extension Intent {
         case .directChat:             return "direct_chat"
         }
     }
+
+    /// Same tool intent with equivalent arguments (trimmed), used to detect routing loops.
+    func isDuplicateLoop(with other: Intent) -> Bool {
+        switch (self, other) {
+        case (.directChat, .directChat):
+            return true
+        case (.readFile(let a), .readFile(let b)):
+            return a.trimmingCharacters(in: .whitespacesAndNewlines)
+                == b.trimmingCharacters(in: .whitespacesAndNewlines)
+        case (.bash(let a), .bash(let b)):
+            return a.trimmingCharacters(in: .whitespacesAndNewlines)
+                == b.trimmingCharacters(in: .whitespacesAndNewlines)
+        case (.searchFile(let a), .searchFile(let b)):
+            return a.trimmingCharacters(in: .whitespacesAndNewlines)
+                == b.trimmingCharacters(in: .whitespacesAndNewlines)
+        default:
+            return false
+        }
+    }
 }

@@ -2,30 +2,36 @@ import Foundation
 
 struct LLMIntentRouter: IntentRouter {
     private let llmClient: LLMClient
+    private let maxClassificationAttempts = 3
 
     init(llmClient: LLMClient) {
         self.llmClient = llmClient
     }
 
     func classify(history: [Message]) async throws -> Intent {
-        let routerHistory: [Message] = [.system(content: Constants.intentRouterPrompt)] + history
+        var messages: [Message] = [.system(content: Constants.intentRouterPrompt)] + history
 
-        let response = try await llmClient.sendMessage(
-            history: routerHistory,
-            tools: [],
-            profile: .deterministic,
-            structuredOutput: .intentRouter
-        )
+        for attempt in 0..<maxClassificationAttempts {
+            let response = try await llmClient.sendMessage(
+                history: messages,
+                tools: [],
+                profile: .deterministic,
+                structuredOutput: .intentRouter
+            )
 
-        let raw = response.content.strippingMarkdownFences()
+            let raw = response.content.strippingMarkdownFences()
 
-        guard let data = raw.data(using: .utf8),
-              let dto = try? JSONDecoder().decode(IntentResponseDTO.self, from: data)
-        else {
-            return .directChat
+            if let data = raw.data(using: .utf8),
+               let dto = try? JSONDecoder().decode(IntentResponseDTO.self, from: data) {
+                return dto.toIntent()
+            }
+
+            if attempt < maxClassificationAttempts - 1 {
+                messages.append(.user(content: Constants.intentRouterSelfCorrectionUserMessage))
+            }
         }
 
-        return dto.toIntent()
+        return .directChat
     }
 }
 

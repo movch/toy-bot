@@ -30,7 +30,17 @@ actor IntentRoutedSession: AgentSession {
         for _ in 0..<maxIterations {
             let intent = try await router.classify(history: history)
 
-            guard intent != .directChat, intent != previousIntent else { break }
+            if intent == .directChat {
+                break
+            }
+
+            if let prev = previousIntent, prev.isDuplicateLoop(with: intent) {
+                let note = Constants.intentRouterLoopStoppedSystemNote
+                history.append(.system(content: note))
+                collectedContext += "\n\n\(note)"
+                break
+            }
+
             previousIntent = intent
 
             print("\n🔍 Intent: \(intent.label)")
@@ -47,7 +57,19 @@ actor IntentRoutedSession: AgentSession {
             collectedContext: collectedContext
         )
 
-        history.append(response)
-        return response
+        let contentTrimmed = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        let finalMessage: Message
+        if contentTrimmed.isEmpty {
+            var body = Constants.synthesizerEmptyReplyFallback
+            if !collectedContext.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                body += "\n\n---\n" + collectedContext
+            }
+            finalMessage = .assistant(content: body, toolCalls: [])
+        } else {
+            finalMessage = response
+        }
+
+        history.append(finalMessage)
+        return finalMessage
     }
 }
