@@ -47,18 +47,6 @@ enum Constants {
         keys: action, path, command, keyword, reasoning.
         """
 
-    static let intentRouterLoopStoppedSystemNote = """
-        [System] The same intent was requested twice in a row after a non-empty tool result; \
-        execution was skipped to avoid a loop. Summarize what succeeded or failed for the user \
-        using the context above.
-        """
-
-    static let intentRouterDuplicateAfterEmptyOutputNote = """
-        [System] The model repeated the same bash intent but the previous run produced no output. \
-        The next classification must use read_file with a path from search_file output, or \
-        direct_chat if enough data exists — do not repeat the same find/bash.
-        """
-
     static let synthesizerEmptyReplyFallback = """
         The model returned an empty reply. If tool output appears below, summarize it; otherwise \
         suggest retrying or checking the local model/API.

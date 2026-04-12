@@ -2,6 +2,7 @@ actor IntentRoutedSession: AgentSession {
     private let router: IntentRouter
     private let executor: ActionExecutor
     private let synthesizer: Synthesizer
+    private let deterministicResolver: DeterministicIntentResolver
     private var history: [Message]
 
     private let maxIterations = 5
@@ -15,6 +16,7 @@ actor IntentRoutedSession: AgentSession {
         self.router = router
         self.executor = executor
         self.synthesizer = synthesizer
+        self.deterministicResolver = DeterministicIntentResolver()
         self.history = [.system(content: systemPrompt)]
     }
 
@@ -25,39 +27,28 @@ actor IntentRoutedSession: AgentSession {
         history.append(.user(content: trimmed))
 
         var collectedContext = ""
-        var previousIntent: Intent?
-        var lastExecutionResult: String?
+        var lastIntent: Intent?
+        var lastResult: String?
 
         for _ in 0..<maxIterations {
-            let intent = try await router.classify(history: history)
+            let intent: Intent
 
-            if intent == .directChat {
-                break
+            if let prev = lastIntent,
+               let prevResult = lastResult,
+               let deterministic = deterministicResolver.resolve(after: prev, result: prevResult) {
+                intent = deterministic
+                print("  ⚡ auto: \(intent.label)")
+            } else {
+                intent = try await router.classify(history: history)
             }
 
-            if let prev = previousIntent, prev.isDuplicateLoop(with: intent) {
-                let lastOutputEmpty = lastExecutionResult?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true
-                if lastOutputEmpty {
-                    let note = Constants.intentRouterDuplicateAfterEmptyOutputNote
-                    history.append(.system(content: note))
-                    collectedContext += "\n\n\(note)"
-                    previousIntent = nil
-                    lastExecutionResult = nil
-                    continue
-                } else {
-                    let note = Constants.intentRouterLoopStoppedSystemNote
-                    history.append(.system(content: note))
-                    collectedContext += "\n\n\(note)"
-                    break
-                }
-            }
-
-            previousIntent = intent
+            if intent == .directChat { break }
 
             print("\n🔍 Intent: \(intent.label)")
 
             let result = try await executor.execute(intent: intent)
-            lastExecutionResult = result
+            lastIntent = intent
+            lastResult = result
 
             let contextEntry = "[\(intent.label)] result:\n\(result)"
             history.append(.system(content: contextEntry))
