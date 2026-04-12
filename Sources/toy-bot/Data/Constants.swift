@@ -36,6 +36,13 @@ enum Constants {
         Collected context:
         """
 
+    /// Short system prompt for synthesis with a minimal message list (avoids overloading small models).
+    static let synthesizerFocusedSystemPrompt = """
+        Answer the user's request using only the tool/file context provided in the next message. \
+        If they asked for a summary, write a short summary (bullet points or a paragraph). \
+        Never return an empty reply. Match the user's language.
+        """
+
     static let synthesizerNonEmptyRetryPrompt = """
         Your previous answer was empty. You MUST respond with at least two sentences summarizing \
         the collected context for the user. Do not leave the reply blank. Match the user's language.
