@@ -51,8 +51,23 @@ enum Constants {
     static let intentRouterSelfCorrectionUserMessage = """
         Your previous reply was not valid JSON or could not be read. Respond again with ONLY \
         one JSON object (no markdown fences, no prose). Use null for unused fields. Required \
-        keys: action, path, command, keyword, reasoning.
+        keys: action, path, command, keyword, skill_id, reasoning.
         """
+
+    /// Appended to intentRouterPrompt when at least one skill is available.
+    static func skillRouterSuffix(skills: [Skill.Metadata]) -> String {
+        let lines = skills.map { "  - \"\($0.id)\": \($0.description)" }.joined(separator: "\n")
+        return """
+
+
+        Additional action: "skill"
+        - Use "skill" when the user's request matches one of the specialised skills below \
+        better than a generic file/bash operation.
+        - Set "skill_id" to the skill id. Leave all other fields null.
+        - Available skills:
+        \(lines)
+        """
+    }
 
     static let synthesizerEmptyReplyFallback = """
         The model returned an empty reply. If tool output appears below, summarize it; otherwise \
