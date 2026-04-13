@@ -2,6 +2,7 @@ actor IntentRoutedSession: AgentSession {
     private let router: IntentRouter
     private let executor: ActionExecutor
     private let synthesizer: Synthesizer
+    private let skillExecutor: SkillExecutor?
     private let deterministicResolver: DeterministicIntentResolver
     private var history: [Message]
 
@@ -11,11 +12,13 @@ actor IntentRoutedSession: AgentSession {
         router: IntentRouter,
         executor: ActionExecutor,
         synthesizer: Synthesizer,
+        skillExecutor: SkillExecutor? = nil,
         systemPrompt: String
     ) {
         self.router = router
         self.executor = executor
         self.synthesizer = synthesizer
+        self.skillExecutor = skillExecutor
         self.deterministicResolver = DeterministicIntentResolver()
         self.history = [.system(content: systemPrompt)]
     }
@@ -46,6 +49,16 @@ actor IntentRoutedSession: AgentSession {
 
             print("\n🔍 Intent: \(intent.label)")
 
+            if case .skill(let skillId) = intent {
+                let result = try await runSkill(
+                    skillId: skillId,
+                    userRequest: trimmed,
+                    collectedContext: collectedContext
+                )
+                history.append(result)
+                return result
+            }
+
             let result = try await executor.execute(intent: intent)
             lastIntent = intent
             lastResult = result
@@ -74,5 +87,24 @@ actor IntentRoutedSession: AgentSession {
 
         history.append(finalMessage)
         return finalMessage
+    }
+
+    private func runSkill(
+        skillId: String,
+        userRequest: String,
+        collectedContext: String
+    ) async throws -> Message {
+        guard let skillExecutor else {
+            return .assistant(
+                content: "Skill '\(skillId)' was selected but no SkillExecutor is configured.",
+                toolCalls: []
+            )
+        }
+        let content = try await skillExecutor.execute(
+            skillId: skillId,
+            userRequest: userRequest,
+            collectedContext: collectedContext.isEmpty ? nil : collectedContext
+        )
+        return .assistant(content: content, toolCalls: [])
     }
 }

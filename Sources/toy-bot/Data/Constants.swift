@@ -4,19 +4,21 @@ enum Constants {
         context, then return ONLY a JSON object — no markdown fences, no explanation, \
         no extra keys:
         {
-          "action": "read_file" | "bash" | "search_file" | "direct_chat",
-          "path": "...",
-          "command": "...",
-          "keyword": "...",
+          "action": "read_file" | "bash" | "search_file" | "direct_chat" | "skill",
+          "path": null,
+          "command": null,
+          "keyword": null,
+          "skill_id": null,
           "reasoning": "..."
         }
 
         Field rules:
-        - "path"     — only for "read_file". Copy EXACTLY from the latest tool output (relative \
-        paths like ./README.md are valid). Never guess a path.
+        - "path"     — only for "read_file". Copy EXACTLY from the latest tool output. Never guess.
         - "command"  — only for "bash". A single shell command string.
         - "keyword"  — only for "search_file". A filename keyword (no slashes).
+        - "skill_id" — only for "skill". The exact skill id string.
         - "reasoning"— one short sentence: why this action is the right next step.
+        - All unused fields must be null.
 
         Decision rules:
         - If search_file or bash already printed file path(s), your next action must be \
@@ -51,8 +53,24 @@ enum Constants {
     static let intentRouterSelfCorrectionUserMessage = """
         Your previous reply was not valid JSON or could not be read. Respond again with ONLY \
         one JSON object (no markdown fences, no prose). Use null for unused fields. Required \
-        keys: action, path, command, keyword, reasoning.
+        keys: action, path, command, keyword, skill_id, reasoning.
         """
+
+    /// Appended to intentRouterPrompt when at least one skill is available.
+    static func skillRouterSuffix(skills: [Skill.Metadata]) -> String {
+        let lines = skills.map { "  - \"\($0.id)\": \($0.description)" }.joined(separator: "\n")
+        return """
+
+
+        IMPORTANT — available skills:
+        \(lines)
+
+        Use action "skill" instead of "direct_chat" when the user's request matches \
+        one of the skill descriptions above. Do NOT answer writing, formatting, or \
+        generation tasks with "direct_chat" if a matching skill exists. \
+        Set "skill_id" to the exact skill id and set all other fields to null.
+        """
+    }
 
     static let synthesizerEmptyReplyFallback = """
         The model returned an empty reply. If tool output appears below, summarize it; otherwise \

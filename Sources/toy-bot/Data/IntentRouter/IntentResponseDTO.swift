@@ -3,7 +3,13 @@ struct IntentResponseDTO: Decodable {
     let path: String?
     let command: String?
     let keyword: String?
+    let skillId: String?
     let reasoning: String?
+
+    enum CodingKeys: String, CodingKey {
+        case action, path, command, keyword, reasoning
+        case skillId = "skill_id"
+    }
 
     /// JSON Schema for OpenAI-style `response_format` / Ollama structured outputs (`json_schema.strict`).
     static var routerJSONSchema: [String: Any] {
@@ -18,14 +24,15 @@ struct IntentResponseDTO: Decodable {
             "properties": [
                 "action": [
                     "type": "string",
-                    "enum": ["read_file", "bash", "search_file", "direct_chat"],
+                    "enum": ["read_file", "bash", "search_file", "direct_chat", "skill"],
                 ],
                 "path": nullableString,
                 "command": nullableString,
                 "keyword": nullableString,
+                "skill_id": nullableString,
                 "reasoning": nullableString,
             ],
-            "required": ["action", "path", "command", "keyword", "reasoning"],
+            "required": ["action", "path", "command", "keyword", "skill_id", "reasoning"],
             "additionalProperties": false,
         ]
     }
@@ -47,6 +54,11 @@ struct IntentResponseDTO: Decodable {
             let trimmed = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { return .directChat }
             return .searchFile(keyword: trimmed)
+        case "skill":
+            guard let skillId else { return .directChat }
+            let trimmed = skillId.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return .directChat }
+            return .skill(id: trimmed)
         default:
             return .directChat
         }
