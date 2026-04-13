@@ -8,18 +8,27 @@ final class ChatLoop {
     }
     
     func runChatLoop() async {
+        print("(Press Enter twice to send — supports multi-line input)")
         while true {
             print("\n>>> ", terminator: "")
-            guard let input = readLine() else { continue }
-            
-            let normalized = input.trimmingCharacters(in: .whitespacesAndNewlines)
-            if normalized.isEmpty { continue }
-            
+            fflush(stdout)
+
+            var lines: [String] = []
+            while let line = readLine() {
+                if line.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { break }
+                lines.append(line)
+            }
+
+            guard !lines.isEmpty else { continue }
+
+            let normalized = lines.joined(separator: "\n")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
             if ["exit", "quit", "q"].contains(normalized.lowercased()) {
                 print("👋 Shutting down...")
                 break
             }
-            
+
             do {
                 print("🤖 Bot: (typing...)", terminator: "")
                 fflush(stdout)
