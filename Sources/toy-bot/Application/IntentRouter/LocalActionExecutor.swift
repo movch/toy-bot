@@ -19,7 +19,7 @@ struct LocalActionExecutor: ActionExecutor {
             let command = "find . -iname '*\(keyword)*' -not -path '*/.git/*' -maxdepth 8 2>/dev/null | head -20"
             return await run("bash", arguments: ["command": command])
 
-        case .directChat:
+        case .directChat, .skill:
             return ""
         }
     }

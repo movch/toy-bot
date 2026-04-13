@@ -18,8 +18,8 @@ struct DeterministicIntentResolver {
         case .bash:
             return resolveAfterBash(output: trimmed)
 
-        case .directChat:
-            return .directChat
+        case .directChat, .skill:
+            return nil
         }
     }
 }
