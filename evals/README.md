@@ -16,6 +16,7 @@ Each JSONL line is one case with:
 
 - `id`, `prompt`, `routing_mode`
 - optional `must_use_tools`, `must_not_use_tools`
+- optional `must_use_skills`, `must_not_use_skills`
 - `expected.checks` (heuristics)
 
 Supported checks in `score.py`:

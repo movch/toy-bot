@@ -60,8 +60,9 @@ trace_prefixes = ("🔍", "⚡", "🔨")
 trace_lines = []
 answer_lines = []
 for line in output.splitlines():
-    if line.startswith(trace_prefixes):
-        trace_lines.append(line)
+    trimmed = line.lstrip()
+    if trimmed.startswith(trace_prefixes):
+        trace_lines.append(trimmed)
     elif line.strip() == "":
         continue
     else:
@@ -76,6 +77,8 @@ record = {
     "expected": case.get("expected", {}),
     "must_use_tools": case.get("must_use_tools", []),
     "must_not_use_tools": case.get("must_not_use_tools", []),
+    "must_use_skills": case.get("must_use_skills", []),
+    "must_not_use_skills": case.get("must_not_use_skills", []),
     "output": output,
     "answer": "\n".join(answer_lines).strip(),
     "trace_lines": trace_lines,

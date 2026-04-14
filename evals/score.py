@@ -93,6 +93,19 @@ def check_json_enum(output, expected):
     return ok, f"{field} in {values}" if ok else f"{field}={value} not in {values}"
 
 
+def check_exact_json_object(output, expected):
+    text = output.strip()
+    if not (text.startswith("{") and text.endswith("}")):
+        return False, "answer is not a raw JSON object"
+    try:
+        data = json.loads(text)
+    except Exception as exc:
+        return False, f"invalid raw JSON object: {exc}"
+    if not isinstance(data, dict):
+        return False, "raw JSON is not an object"
+    return True, "answer is a raw JSON object"
+
+
 CHECKERS = {
     "non_empty": check_non_empty,
     "max_chars": check_max_chars,
@@ -101,6 +114,7 @@ CHECKERS = {
     "contains_regex": check_contains_regex,
     "must_not_contains_any": check_must_not_contains_any,
     "valid_json_object": check_valid_json_object,
+    "exact_json_object": check_exact_json_object,
     "json_has_keys": check_json_has_keys,
     "json_enum": check_json_enum,
 }
@@ -110,6 +124,7 @@ def evaluate(record):
     output = record.get("answer", "")
     trace_lines = record.get("trace_lines", [])
     trace_text = "\n".join(trace_lines)
+    raw_output = record.get("output", "")
     checks = record.get("expected", {}).get("checks", [])
     failures = []
 
@@ -124,12 +139,27 @@ def evaluate(record):
             failures.append(f"{kind}: {message}")
 
     for tool in record.get("must_use_tools", []):
-        if tool not in trace_text and tool not in record.get("output", ""):
+        if tool not in trace_text:
             failures.append(f"must_use_tools: '{tool}' not found in output/trace")
 
     for tool in record.get("must_not_use_tools", []):
         if tool in trace_text or tool in record.get("output", ""):
             failures.append(f"must_not_use_tools: '{tool}' found in output/trace")
+
+    # Skills are typically visible as:
+    # - intent mode trace lines: "🔍 Intent: skill(<id>)"
+    # - tool-calling payloads that may include JSON field: "name": "<id>"
+    for skill_id in record.get("must_use_skills", []):
+        has_intent_trace = f"skill({skill_id})" in trace_text
+        has_payload_name = f"\"name\": \"{skill_id}\"" in raw_output
+        if not (has_intent_trace or has_payload_name):
+            failures.append(f"must_use_skills: '{skill_id}' not found in trace/payload")
+
+    for skill_id in record.get("must_not_use_skills", []):
+        has_intent_trace = f"skill({skill_id})" in trace_text
+        has_payload_name = f"\"name\": \"{skill_id}\"" in raw_output
+        if has_intent_trace or has_payload_name:
+            failures.append(f"must_not_use_skills: '{skill_id}' found in trace/payload")
 
     if record.get("exit_code", 0) != 0:
         failures.append(f"non-zero exit code: {record['exit_code']}")
