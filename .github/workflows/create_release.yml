@@ -30,7 +30,14 @@ jobs:
           swift build -c release
           BIN="$(swift build -c release --show-bin-path)/ToyBot"
           test -x "$BIN"
-          zip toy-bot-macos.zip "$BIN" skills/
+          rm -rf release-artifact toy-bot-macos.zip
+          mkdir -p release-artifact/skills
+          cp "$BIN" release-artifact/ToyBot
+          cp skills/*.md release-artifact/skills/
+          (
+            cd release-artifact
+            zip -r ../toy-bot-macos.zip ToyBot skills
+          )
 
       - name: Create release and upload asset
         uses: softprops/action-gh-release@v2

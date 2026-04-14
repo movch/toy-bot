@@ -2,6 +2,10 @@
 
 ![toy-bot CLI session](img/screenshot.png)
 
+Educational Swift CLI agent for experimenting with small-model agent patterns.
+
+This project is heavily inspired by [build-your-own-openclaw](https://github.com/czl9707/build-your-own-openclaw).
+
 Minimal Swift CLI agent with tool calling support and an OpenAI-compatible client.
 
 ## Routing modes
@@ -86,6 +90,29 @@ Layered layout:
 - **`Tool`** (`Domain/Interfaces`): name, description, `parametersSchema`, `execute`.
 - **`OpenAIClient`** (`Data`): chat completions; optional `LLMStructuredOutput` for intent JSON schema.
 - **`IntentResponseDTO`** (`Data`): JSON shape for router + schema for structured outputs.
+
+## Skills
+
+`toy-bot` supports file-based micro-skills in the `skills/` directory. Each skill is a `.md` file with:
+
+- YAML front-matter (`id`, `name`, `description`, `output_format`)
+- system prompt body
+- optional `---examples---` section with `user:` / `assistant:` few-shot pairs
+
+At runtime:
+
+- `LLMIntentRouter` receives only skill metadata (id + description)
+- `SkillExecutor` lazily loads the selected skill file
+- the skill runs in an isolated worker session (system prompt + examples + current request)
+
+This keeps context small and predictable for local models.
+
+### Included skills
+
+- `conventional-commit`
+- `pr-description`
+- `todo-breakdown`
+- `regex`
 
 ### Built-in tools
 
@@ -193,3 +220,40 @@ Supported flags: `--provider`, `--base-url`, `--model`, `--token`, `--ollama-hos
 - Request timeout is set to 5 minutes to accommodate slow local inference.
 - If you run Ollama remotely and need auth, pass `--token` or `TOYBOT_API_TOKEN`.
 - Structured outputs for the intent router require a recent Ollama that supports `response_format` / JSON schema on `/v1/chat/completions`.
+
+## Contributing skills
+
+Skill contributions are welcome. Please keep skills focused and small-model friendly.
+
+### Skill authoring rules
+
+- One skill = one concrete job (avoid broad "developer assistant" prompts)
+- Keep prompts short and specific
+- Add 1-3 high-quality few-shot examples
+- Define a strict output shape in the prompt (format first, style second)
+- Prefer tasks with constrained input/output over open-ended reasoning
+
+### Skill file template
+
+```md
+---
+id: your-skill-id
+name: Human Friendly Name
+description: One-line router-facing description
+output_format: free_text
+---
+
+System prompt text here.
+
+---examples---
+
+user: Example input
+assistant: Example output
+```
+
+### Submission checklist
+
+- Place the file under `skills/` and use lowercase kebab-case filename
+- Ensure `id` matches the filename (without `.md`)
+- Validate that examples are realistic and deterministic
+- Run `swift build` before opening a PR
