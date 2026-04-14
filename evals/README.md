@@ -5,10 +5,10 @@ This directory contains a lightweight eval harness for checking model/agent qual
 ## What it does
 
 - Reads prompt cases from `evals/cases/*.jsonl`
-- Runs one-shot CLI calls via `swift run ToyBot ... -c "prompt"`
+- Builds `ToyBot` once, then runs one-shot CLI calls via the binary
 - Stores raw run output in `evals/runs/<timestamp>.jsonl`
 - Scores each case with simple heuristic checks
-- Writes a markdown report to `evals/reports/<timestamp>.md`
+- Writes an HTML report to `evals/reports/<timestamp>.html`
 
 ## Case format
 
@@ -24,6 +24,8 @@ Supported checks in `score.py`:
 - `max_chars`
 - `contains_any`
 - `contains_all`
+- `contains_regex`
+- `must_not_contains_any`
 - `valid_json_object`
 - `json_has_keys`
 - `json_enum`
@@ -39,6 +41,13 @@ Or with a custom case file:
 
 ```bash
 ./evals/run.sh evals/cases/smoke.jsonl
+```
+
+Optional env:
+
+```bash
+# debug|release (default: release)
+TOYBOT_EVAL_BUILD_CONFIG=debug ./evals/run.sh
 ```
 
 ## One-shot mode in CLI

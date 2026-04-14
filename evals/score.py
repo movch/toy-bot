@@ -2,6 +2,7 @@
 import json
 import re
 import sys
+import html
 from pathlib import Path
 
 
@@ -30,6 +31,22 @@ def check_contains_all(output, expected):
     missing = [v for v in values if v.lower() not in lower]
     ok = not missing
     return ok, "contains all expected tokens" if ok else f"missing: {missing}"
+
+
+def check_contains_regex(output, expected):
+    pattern = expected.get("value", "")
+    if not pattern:
+        return False, "missing regex pattern"
+    ok = re.search(pattern, output, flags=re.S) is not None
+    return ok, f"regex matched: {pattern}" if ok else f"regex not matched: {pattern}"
+
+
+def check_must_not_contains_any(output, expected):
+    values = expected.get("values", [])
+    lower = output.lower()
+    hits = [v for v in values if v.lower() in lower]
+    ok = not hits
+    return ok, "forbidden tokens are absent" if ok else f"forbidden tokens found: {hits}"
 
 
 def parse_json_object(output):
@@ -81,6 +98,8 @@ CHECKERS = {
     "max_chars": check_max_chars,
     "contains_any": check_contains_any,
     "contains_all": check_contains_all,
+    "contains_regex": check_contains_regex,
+    "must_not_contains_any": check_must_not_contains_any,
     "valid_json_object": check_valid_json_object,
     "json_has_keys": check_json_has_keys,
     "json_enum": check_json_enum,
@@ -88,7 +107,9 @@ CHECKERS = {
 
 
 def evaluate(record):
-    output = record.get("output", "")
+    output = record.get("answer", "")
+    trace_lines = record.get("trace_lines", [])
+    trace_text = "\n".join(trace_lines)
     checks = record.get("expected", {}).get("checks", [])
     failures = []
 
@@ -103,11 +124,11 @@ def evaluate(record):
             failures.append(f"{kind}: {message}")
 
     for tool in record.get("must_use_tools", []):
-        if tool not in output:
+        if tool not in trace_text and tool not in record.get("output", ""):
             failures.append(f"must_use_tools: '{tool}' not found in output/trace")
 
     for tool in record.get("must_not_use_tools", []):
-        if tool in output:
+        if tool in trace_text or tool in record.get("output", ""):
             failures.append(f"must_not_use_tools: '{tool}' found in output/trace")
 
     if record.get("exit_code", 0) != 0:
@@ -119,11 +140,11 @@ def evaluate(record):
 
 def main():
     if len(sys.argv) != 3:
-        print("Usage: score.py <run_file.jsonl> <report_file.md>", file=sys.stderr)
+        print("Usage: score.py <run_file.jsonl> <report_file.html>", file=sys.stderr)
         sys.exit(1)
 
     run_file = Path(sys.argv[1])
-    report_file = Path(sys.argv[2])
+    html_report_file = Path(sys.argv[2])
     if not run_file.exists():
         print(f"Run file not found: {run_file}", file=sys.stderr)
         sys.exit(1)
@@ -135,34 +156,72 @@ def main():
 
     total = len(records)
     passed_count = 0
-    lines = [
-        "# Eval Report",
-        "",
-        f"- Total cases: {total}",
-    ]
-
+    report_rows = []
     for record in records:
         passed, failures = evaluate(record)
         if passed:
             passed_count += 1
         status = "PASS" if passed else "FAIL"
-        lines.append(
-            f"- [{status}] `{record['case_id']}` | routing={record.get('routing_mode')} | latency={record.get('latency_ms')}ms"
-        )
-        if failures:
-            for failure in failures:
-                lines.append(f"  - {failure}")
+        report_rows.append((record, passed, failures))
 
     score = (passed_count / total * 100.0) if total else 0.0
-    lines.insert(3, f"- Passed: {passed_count}")
-    lines.insert(4, f"- Score: {score:.1f}%")
-    lines.append("")
-
-    report_file.write_text("\n".join(lines), encoding="utf-8")
+    html_report_file.write_text(build_html_report(total, passed_count, score, report_rows), encoding="utf-8")
     print(f"Score: {score:.1f}% ({passed_count}/{total})")
 
     if passed_count != total:
         sys.exit(2)
+
+
+def build_html_report(total, passed_count, score, report_rows):
+    details_html = []
+    for record, passed, failures in report_rows:
+        status = "PASS" if passed else "FAIL"
+        status_class = "pass" if passed else "fail"
+
+        failure_items = "".join(f"<li>{html.escape(item)}</li>" for item in failures) if failures else "<li>None</li>"
+        details_html.append(
+            "<details>"
+            f"<summary><strong>{html.escape(record.get('case_id', ''))}</strong> — "
+            f"<span class=\"{status_class}\">{status}</span> | "
+            f"routing={html.escape(record.get('routing_mode', ''))} | "
+            f"latency={record.get('latency_ms', 0)}ms</summary>"
+            "<div class=\"detail-block\">"
+            f"<p><strong>Prompt:</strong> {html.escape(record.get('prompt', ''))}</p>"
+            f"<p><strong>Answer:</strong></p><pre>{html.escape(record.get('answer', ''))}</pre>"
+            f"<p><strong>Trace:</strong></p><pre>{html.escape(chr(10).join(record.get('trace_lines', [])))}</pre>"
+            f"<p><strong>Failures:</strong></p><ul>{failure_items}</ul>"
+            "</div>"
+            "</details>"
+        )
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ToyBot Eval Report</title>
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 24px; color: #1f2937; }}
+    h1 {{ margin-bottom: 8px; }}
+    .meta {{ margin-bottom: 18px; color: #4b5563; }}
+    table {{ border-collapse: collapse; width: 100%; margin-bottom: 20px; }}
+    th, td {{ border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; }}
+    th {{ background: #f9fafb; }}
+    .pass {{ color: #166534; font-weight: 600; }}
+    .fail {{ color: #991b1b; font-weight: 600; }}
+    details {{ margin-bottom: 12px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 10px; }}
+    pre {{ white-space: pre-wrap; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; }}
+    .detail-block p {{ margin: 8px 0 6px; }}
+  </style>
+</head>
+<body>
+  <h1>ToyBot Eval Report</h1>
+  <div class="meta">Total: <strong>{total}</strong> &nbsp; Passed: <strong>{passed_count}</strong> &nbsp; Score: <strong>{score:.1f}%</strong></div>
+  <h2>Details</h2>
+  {''.join(details_html)}
+</body>
+</html>
+"""
 
 
 if __name__ == "__main__":
