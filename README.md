@@ -2,11 +2,7 @@
 
 ![toy-bot CLI session](img/screenshot.png)
 
-Educational Swift CLI agent for experimenting with small-model agent patterns.
-
-This project is heavily inspired by [build-your-own-openclaw](https://github.com/czl9707/build-your-own-openclaw).
-
-Minimal Swift CLI agent with tool calling support and an OpenAI-compatible client.
+Minimal Swift CLI agent with tool calling support and an OpenAI-compatible client. This project is built for educational purposes for experimenting with small-model agent patterns. It is heavily inspired by [build-your-own-openclaw](https://github.com/czl9707/build-your-own-openclaw).
 
 ## Routing modes
 
