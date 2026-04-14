@@ -95,13 +95,18 @@ Layered layout:
 - system prompt body
 - optional `---examples---` section with `user:` / `assistant:` few-shot pairs
 
-At runtime:
+At runtime, skills are applied differently by routing mode:
 
-- `LLMIntentRouter` receives only skill metadata (id + description)
-- `SkillExecutor` lazily loads the selected skill file
-- the skill runs in an isolated worker session (system prompt + examples + current request)
+- **`intent` mode (small-model path):**
+  - `LLMIntentRouter` receives only skill metadata (id + description)
+  - `SkillExecutor` lazily loads only the selected skill file
+  - the skill runs in an isolated worker session (system prompt + examples + current request)
+- **`tool-calling` mode (large-model path):**
+  - skills are injected into the system prompt as a single consolidated block
+  - injection is bounded (global character cap + per-skill prompt/example truncation)
+  - this avoids extra routing hops and keeps behavior simple for stronger models
 
-This keeps context small and predictable for local models.
+This gives small models stricter context isolation, while keeping the large-model path straightforward.
 
 ### Included skills
 

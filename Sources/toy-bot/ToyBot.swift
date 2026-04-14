@@ -35,10 +35,13 @@ struct ToyBot {
                 systemPrompt: Constants.defaultAgentPrompt
             )
         case .toolCalling:
+            let injectedSkillsPrompt = ToolCallingSkillPromptBuilder(skillRegistry: skillRegistry)
+                .buildInjectedPrompt() ?? ""
+            let toolCallingSystemPrompt = Constants.defaultAgentPrompt + injectedSkillsPrompt
             agentSession = InMemoryAgentSession(
                 agent: ChatAgent(
                     llmClient: llmClient,
-                    systemPrompt: Constants.defaultAgentPrompt,
+                    systemPrompt: toolCallingSystemPrompt,
                     toolRegistry: toolRegistry
                 )
             )
