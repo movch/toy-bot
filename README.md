@@ -209,6 +209,21 @@ swift run ToyBot --provider openai --token sk-... --model gpt-4o-mini --routing 
 
 Supported flags: `--provider`, `--base-url`, `--model`, `--token`, `--ollama-host`, **`--routing`**
 
+### One-shot mode (for evals)
+
+Use one-shot mode to run a single prompt and print only the final model answer.
+
+```bash
+swift run ToyBot --routing intent -c "Кратко объясни что делает файл Sources/toy-bot/ToyBot.swift"
+```
+
+Prompt flags:
+
+- `-c "prompt"`
+- `--prompt "prompt"`
+
+When one-shot mode is used, the CLI exits after one response. Errors are written to stderr and return non-zero exit code.
+
 ## Configuration Priority
 
 1. CLI arguments
